@@ -45,7 +45,6 @@ export default function Home() {
     };
 
     const filterExperiences = () => {
-        // Ensure experiences is an array before filtering
         if (!Array.isArray(experiences) || experiences.length === 0) {
             setFilteredExperiences([]);
             return;
@@ -53,7 +52,6 @@ export default function Home() {
 
         let filtered = experiences;
 
-        // Filter by search query
         if (searchQuery) {
             filtered = filtered.filter(
                 (exp) =>
@@ -78,17 +76,41 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg-light)] py-10">
-            {/* Hero Section */}
-            <div className="px-6 md:px-16 mt-6 mb-8 animate-fade-in">
-                <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-dark)] mb-3">
-                    Discover Your Next Adventure
-                </h1>
-                <p className="text-lg text-[var(--color-gray)]">
-                    Book unique experiences and create unforgettable memories
-                </p>
+            <div className="px-6 md:px-16 mt-6 mb-12 animate-fade-in">
+                <div className="relative">
+                    <div className="absolute -top-4 -left-4 w-24 h-24 bg-[var(--color-primary)] rounded-full opacity-20 blur-3xl animate-pulse"></div>
+                    <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-[var(--color-primary)] rounded-full opacity-10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                    <div className="relative z-10">
+                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[var(--color-dark)] mb-4 leading-tight animate-slide-up">
+                            Discover Your Next
+                            <br />
+                            <span className="relative inline-block">
+                                <span className="relative z-10 bg-gradient-to-r from-[var(--color-dark)] to-[var(--color-gray)] bg-clip-text text-transparent">
+                                    Adventure
+                                </span>
+                                <span className="absolute bottom-2 left-0 w-full h-4 bg-[var(--color-primary)] -z-10 transform -skew-y-1"></span>
+                            </span>
+                        </h1>
+                        <p className="text-lg md:text-xl text-[var(--color-gray)] max-w-2xl leading-relaxed animate-slide-right">
+                            Book unique experiences and create unforgettable memories with expert guides and premium activities across incredible destinations
+                        </p>
+                        <div className="flex flex-wrap gap-6 mt-6 animate-scale-in">
+                            <div className="flex items-center gap-2 text-[var(--color-gray)]">
+                                <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse"></div>
+                                <span className="text-sm font-medium">Verified Experiences</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[var(--color-gray)]">
+                                <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                                <span className="text-sm font-medium">Expert Guides</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[var(--color-gray)]">
+                                <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+                                <span className="text-sm font-medium">Safety Guaranteed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            {/* Experience Grid */}
             <main className="px-6 md:px-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {Array.isArray(filteredExperiences) && filteredExperiences.length > 0 ? (
                     filteredExperiences.map((exp, index) => (
