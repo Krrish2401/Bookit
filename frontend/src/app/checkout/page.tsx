@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { experienceService, bookingService, promoCodeService } from "@/lib/services";
 import { Experience, BookingFormData } from "@/types";
-import { formatCurrency, calculateSubtotal, calculateTotal, TAX_RATE } from "@/lib/utils";
+import { formatCurrency, calculateSubtotal, TAX_RATE } from "@/lib/utils";
 import toast from "react-hot-toast";
+
+interface StoredBookingData {
+    experienceId: string;
+    date: string;
+    timeSlot: string;
+    quantity: number;
+}
 
 export default function CheckoutPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [experience, setExperience] = useState<Experience | null>(null);
-    const [bookingData, setBookingData] = useState<any>(null);
+    const [bookingData, setBookingData] = useState<StoredBookingData | null>(null);
     const [discount, setDiscount] = useState(0);
     const [promoApplied, setPromoApplied] = useState(false);
     const [formData, setFormData] = useState({
@@ -21,21 +28,7 @@ export default function CheckoutPage() {
         agreeToTerms: false,
     });
 
-    useEffect(() => {
-        // Get booking data from sessionStorage
-        const storedData = sessionStorage.getItem("bookingData");
-        if (!storedData) {
-            toast.error("No booking data found");
-            router.push("/");
-            return;
-        }
-
-        const data = JSON.parse(storedData);
-        setBookingData(data);
-        fetchExperience(data.experienceId);
-    }, []);
-
-    const fetchExperience = async (id: string) => {
+    const fetchExperience = useCallback(async (id: string) => {
         try {
             const data = await experienceService.getById(id);
             setExperience(data);
@@ -43,7 +36,20 @@ export default function CheckoutPage() {
             console.error("Error fetching experience:", error);
             toast.error("Failed to load experience details");
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const storedData = sessionStorage.getItem("bookingData");
+        if (!storedData) {
+            toast.error("No booking data found");
+            router.push("/");
+            return;
+        }
+
+        const data = JSON.parse(storedData) as StoredBookingData;
+        setBookingData(data);
+        fetchExperience(data.experienceId);
+    }, [router, fetchExperience]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -66,10 +72,13 @@ export default function CheckoutPage() {
                 setPromoApplied(true);
                 toast.success(`Promo applied: ${promoData.discount}% off`);
             }
-        } catch (error: any) {
+        } catch (error) {
             setDiscount(0);
             setPromoApplied(false);
-            toast.error(error.response?.data?.message || "Invalid promo code");
+            const errorMessage = error instanceof Error && 'response' in error 
+                ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+                : "Invalid promo code";
+            toast.error(errorMessage || "Invalid promo code");
         }
     };
 
@@ -81,10 +90,15 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!bookingData || !experience) {
+            toast.error("Booking data not found");
+            return;
+        }
+
         try {
             setLoading(true);
 
-            const baseSubtotal = calculateSubtotal(experience!.price, bookingData.quantity);
+            const baseSubtotal = calculateSubtotal(experience.price, bookingData.quantity);
             const discountAmount = baseSubtotal * discount;
             const subtotalAfterDiscount = baseSubtotal - discountAmount;
             const taxesAmount = Math.round(subtotalAfterDiscount * TAX_RATE);
@@ -106,14 +120,16 @@ export default function CheckoutPage() {
 
             const result = await bookingService.create(bookingPayload);
 
-            // Clear sessionStorage
             sessionStorage.removeItem("bookingData");
 
             toast.success("Booking confirmed!");
             router.push(`/confirmation?ref=${result.referenceId}`);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error creating booking:", error);
-            toast.error(error.response?.data?.message || "Failed to create booking");
+            const errorMessage = error instanceof Error && 'response' in error 
+                ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+                : "Failed to create booking";
+            toast.error(errorMessage || "Failed to create booking");
         } finally {
             setLoading(false);
         }
@@ -281,13 +297,6 @@ export default function CheckoutPage() {
                             </span>
                         ) : "Pay and Confirm"}
                     </button>
-
-                    <div className="mt-4 flex items-center justify-center text-sm text-[var(--color-gray)]">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        Secure payment processing
-                    </div>
                 </div>
             </div>
         </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
-export default function Header() {
+function HeaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,5 +89,43 @@ export default function Header() {
         </button>
       </div>
     </header>
+  );
+}
+
+export default function Header() {
+  return (
+    <Suspense fallback={
+      <header className="flex justify-between items-center px-6 md:px-16 py-4 bg-[var(--color-bg-light)] sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center space-x-2">
+          <div className="relative w-[120px] h-[50px]">
+            <Image
+              src="/logo.png"
+              alt="Highway Delite Logo"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search experiences"
+              disabled
+              className="border border-[var(--color-border)] rounded-lg px-4 py-2 w-60 md:w-80 text-[var(--color-dark)] placeholder:text-[var(--color-gray)] bg-white/50"
+            />
+          </div>
+          <button
+            disabled
+            className="bg-[var(--color-primary)] text-[var(--color-dark)] px-4 py-2 rounded-lg font-medium shadow-md opacity-75"
+          >
+            Search
+          </button>
+        </div>
+      </header>
+    }>
+      <HeaderContent />
+    </Suspense>
   );
 }

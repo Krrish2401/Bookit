@@ -1,3 +1,5 @@
+import type { Booking } from "@/types";
+
 export const TAX_RATE = 0.06; // 6% tax rate
 
 export const formatCurrency = (amount: number): string => {
@@ -31,7 +33,7 @@ export const formatDate = (dateString: string): string => {
   });
 };
 
-export const generatePDF = (booking: any) => {
+export const generatePDF = (booking: Booking) => {
   // Using dynamic import to avoid SSR issues
   import("jspdf").then(({ jsPDF }) => {
     const doc = new jsPDF();
@@ -50,24 +52,21 @@ export const generatePDF = (booking: any) => {
     doc.setFontSize(10);
     doc.text("Booking Details:", 20, 65);
     doc.text(`Experience: ${booking.experience.title}`, 20, 75);
-    doc.text(`Date: ${formatDate(booking.date)}`, 20, 85);
-    doc.text(`Time: ${booking.timeSlot}`, 20, 95);
+    doc.text(`Date: ${booking.bookingDate}`, 20, 85);
+    doc.text(`Time: ${booking.bookingTime}`, 20, 95);
     doc.text(`Quantity: ${booking.quantity}`, 20, 105);
 
     doc.text("Customer Details:", 20, 120);
-    doc.text(`Name: ${booking.name}`, 20, 130);
+    doc.text(`Name: ${booking.fullName}`, 20, 130);
     doc.text(`Email: ${booking.email}`, 20, 140);
-    doc.text(`Phone: ${booking.phone}`, 20, 150);
 
-    doc.text("Price Details:", 20, 165);
-    const subtotal = booking.experience.price * booking.quantity;
-    const tax = calculateTax(subtotal);
-    doc.text(`Subtotal: ${formatCurrency(subtotal)}`, 20, 175);
-    doc.text(`Tax (6%): ${formatCurrency(tax)}`, 20, 185);
+    doc.text("Price Details:", 20, 155);
+    doc.text(`Subtotal: ${formatCurrency(booking.subtotal)}`, 20, 165);
+    doc.text(`Tax (6%): ${formatCurrency(booking.taxes)}`, 20, 175);
     doc.text(
-      `Total: ${formatCurrency(booking.totalPrice)}`,
+      `Total: ${formatCurrency(booking.total)}`,
       20,
-      195
+      185
     );
 
     doc.setFontSize(8);

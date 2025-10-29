@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { experienceService } from "@/lib/services";
 import { Experience } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
-export default function Home() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+function HomeContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -16,6 +20,26 @@ export default function Home() {
     );
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
+
+    const filterExperiences = useCallback(() => {
+        if (!Array.isArray(experiences) || experiences.length === 0) {
+            setFilteredExperiences([]);
+            return;
+        }
+
+        let filtered = experiences;
+
+        // Filter by search query
+        if (searchQuery) {
+            filtered = filtered.filter(
+                (exp) =>
+                    exp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    exp.location.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        setFilteredExperiences(filtered);
+    }, [experiences, searchQuery]);
 
     useEffect(() => {
         fetchExperiences();
@@ -28,7 +52,7 @@ export default function Home() {
 
     useEffect(() => {
         filterExperiences();
-    }, [experiences, searchQuery]);
+    }, [filterExperiences]);
 
     const fetchExperiences = async () => {
         try {
@@ -42,25 +66,6 @@ export default function Home() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const filterExperiences = () => {
-        if (!Array.isArray(experiences) || experiences.length === 0) {
-            setFilteredExperiences([]);
-            return;
-        }
-
-        let filtered = experiences;
-
-        if (searchQuery) {
-            filtered = filtered.filter(
-                (exp) =>
-                    exp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    exp.location.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
-
-        setFilteredExperiences(filtered);
     };
 
     if (loading) {
@@ -121,9 +126,11 @@ export default function Home() {
                             onClick={() => router.push(`/details/${exp.id}`)}
                         >
                             <div className="relative overflow-hidden">
-                                <img
+                                <Image
                                     src={exp.image}
                                     alt={exp.title}
+                                    width={400}
+                                    height={192}
                                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -172,5 +179,20 @@ export default function Home() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function Home() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg-light)]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-[var(--color-bg-card)] border-t-[var(--color-primary)] mx-auto mb-4"></div>
+                    <p className="text-[var(--color-gray)] font-medium">Loading...</p>
+                </div>
+            </div>
+        }>
+            <HomeContent />
+        </Suspense>
     );
 }

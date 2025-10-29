@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { experienceService, bookingService } from "@/lib/services";
 import { Experience } from "@/types";
 import { formatCurrency, calculateSubtotal, calculateTotal, TAX_RATE } from "@/lib/utils";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
 export default function DetailsPage() {
     const params = useParams();
@@ -16,8 +17,48 @@ export default function DetailsPage() {
     const [selectedTime, setSelectedTime] = useState("");
     const [quantity, setQuantity] = useState(1);
     const [availableSlots, setAvailableSlots] = useState<number | null>(null);
-    const [checkingAvailability, setCheckingAvailability] = useState(false);
     const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, number>>({});
+
+    const checkAvailability = useCallback(async () => {
+        if (!experience || !selectedDate || !selectedTime) return;
+
+        try {
+            const data = await bookingService.checkAvailability(
+                experience.id,
+                selectedDate,
+                selectedTime
+            );
+            setAvailableSlots(data.availableSlots);
+        } catch (error) {
+            console.error("Error checking availability:", error);
+            toast.error("Failed to check availability");
+        }
+    }, [experience, selectedDate, selectedTime]);
+
+    const checkAllTimeSlotsAvailability = useCallback(async () => {
+        if (!experience || !selectedDate || !experience.availableTimes) return;
+
+        try {
+            const availabilityPromises = experience.availableTimes.map(async (time) => {
+                const data = await bookingService.checkAvailability(
+                    experience.id,
+                    selectedDate,
+                    time
+                );
+                return { time, slots: data.availableSlots };
+            });
+
+            const results = await Promise.all(availabilityPromises);
+            const availabilityMap = results.reduce((acc, { time, slots }) => {
+                acc[time] = slots;
+                return acc;
+            }, {} as Record<string, number>);
+
+            setTimeSlotAvailability(availabilityMap);
+        } catch (error) {
+            console.error("Error checking time slot availability:", error);
+        }
+    }, [experience, selectedDate]);
 
     useEffect(() => {
         if (params.id) {
@@ -29,13 +70,13 @@ export default function DetailsPage() {
         if (experience && selectedDate && selectedTime) {
             checkAvailability();
         }
-    }, [experience, selectedDate, selectedTime]);
+    }, [experience, selectedDate, selectedTime, checkAvailability]);
 
     useEffect(() => {
         if (experience && selectedDate && experience.availableTimes) {
             checkAllTimeSlotsAvailability();
         }
-    }, [experience, selectedDate]);
+    }, [experience, selectedDate, checkAllTimeSlotsAvailability]);
 
     const fetchExperience = async (id: string) => {
         try {
@@ -54,58 +95,6 @@ export default function DetailsPage() {
             toast.error("Failed to load experience details");
         } finally {
             setLoading(false);
-        }
-    };
-
-    const checkAvailability = async () => {
-        if (!experience || !selectedDate || !selectedTime) return;
-        
-        try {
-            setCheckingAvailability(true);
-            const availability = await bookingService.checkAvailability(
-                experience.id,
-                selectedDate,
-                selectedTime
-            );
-            setAvailableSlots(availability.availableSlots);
-            
-            if (quantity > availability.availableSlots) {
-                setQuantity(Math.max(1, availability.availableSlots));
-            }
-        } catch (error) {
-            console.error("Error checking availability:", error);
-            setAvailableSlots(null);
-        } finally {
-            setCheckingAvailability(false);
-        }
-    };
-
-    const checkAllTimeSlotsAvailability = async () => {
-        if (!experience || !selectedDate || !experience.availableTimes) return;
-        
-        try {
-            const availabilityPromises = experience.availableTimes.map(async (time) => {
-                try {
-                    const availability = await bookingService.checkAvailability(
-                        experience.id,
-                        selectedDate,
-                        time
-                    );
-                    return { time, slots: availability.availableSlots };
-                } catch (error) {
-                    console.error(`Error checking availability for ${time}:`, error);
-                    return { time, slots: 0 };
-                }
-            });
-            
-            const results = await Promise.all(availabilityPromises);
-            const availabilityMap: Record<string, number> = {};
-            results.forEach(({ time, slots }) => {
-                availabilityMap[time] = slots;
-            });
-            setTimeSlotAvailability(availabilityMap);
-        } catch (error) {
-            console.error("Error checking time slots availability:", error);
         }
     };
 
@@ -187,9 +176,11 @@ export default function DetailsPage() {
 
             <div className="flex flex-col lg:flex-row justify-between gap-10 px-6 md:px-16">
                 <div className="flex-1">
-                    <img
+                    <Image
                         src={experience.image}
                         alt={experience.title}
+                        width={800}
+                        height={288}
                         className="w-full h-72 object-cover rounded-2xl mb-6"
                     />
                     <h2 className="text-2xl font-semibold text-[var(--color-dark)] mb-2">

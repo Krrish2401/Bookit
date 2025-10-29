@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { bookingService } from "@/lib/services";
 import { Booking } from "@/types";
 import { CheckCircle, Download, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
-export default function ConfirmationPage() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+function ConfirmationContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const referenceId = searchParams.get("ref");
@@ -17,16 +21,7 @@ export default function ConfirmationPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
 
-    useEffect(() => {
-        if (referenceId) {
-            fetchBooking(referenceId);
-        } else {
-            toast.error("No booking reference found");
-            router.push("/");
-        }
-    }, [referenceId]);
-
-    const fetchBooking = async (refId: string) => {
+    const fetchBooking = useCallback(async (refId: string) => {
         try {
             setLoading(true);
             const data = await bookingService.getByReferenceId(refId);
@@ -38,7 +33,16 @@ export default function ConfirmationPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        if (referenceId) {
+            fetchBooking(referenceId);
+        } else {
+            toast.error("No booking reference found");
+            router.push("/");
+        }
+    }, [referenceId, fetchBooking, router]);
 
     const handleDownloadReceipt = async () => {
         if (!booking) return;
@@ -140,8 +144,6 @@ export default function ConfirmationPage() {
                 hour: '2-digit',
                 minute: '2-digit'
             })}`, 105, 280, { align: "center" });
-
-            // Save
             doc.save(`booking-receipt-${booking.referenceId}.pdf`);
             toast.success("Receipt downloaded successfully!");
         } catch (error) {
@@ -170,11 +172,10 @@ export default function ConfirmationPage() {
 
             <div className="flex flex-col items-center max-w-md w-full">
                 <div className="relative animate-scale-in">
-                    <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75"></div>
-                    <CheckCircle className="relative w-20 h-20 text-green-500 mb-6 animate-bounce" style={{ animationDuration: '2s' }} />
+                    <CheckCircle className="relative w-20 h-20 text-green-500 mb-6 " style={{ animationDuration: '2s' }} />
                 </div>
 
-                <h1 className="text-3xl font-bold mb-3 animate-fade-in text-[var(--color-dark)]">
+                <h1 className="text-3xl font-bold mb-9 animate-fade-in text-[var(--color-dark)]">
                     Booking Confirmed!
                 </h1>
                 
@@ -190,14 +191,6 @@ export default function ConfirmationPage() {
                         Save this for your records
                     </p>
                 </div>
-
-                <div className="text-center mb-8 animate-fade-in">
-                    <p className="text-[var(--color-gray)] mb-2">
-                        A confirmation email has been sent to
-                    </p>
-                    <p className="font-semibold text-[var(--color-dark)]">{booking.email}</p>
-                </div>
-
                 <div className="flex gap-4 mb-8 animate-slide-up">
                     <button
                         onClick={() => setShowModal(true)}
@@ -244,9 +237,11 @@ export default function ConfirmationPage() {
                                 </h3>
                                 <div className="bg-[var(--color-bg-light)] rounded-lg p-4 space-y-3">
                                     <div className="flex items-start">
-                                        <img
+                                        <Image
                                             src={booking.experience.image}
                                             alt={booking.experience.title}
+                                            width={96}
+                                            height={96}
                                             className="w-24 h-24 object-cover rounded-lg mr-4"
                                         />
                                         <div className="flex-1">
@@ -360,5 +355,20 @@ export default function ConfirmationPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function ConfirmationPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg-light)]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-[var(--color-bg-card)] border-t-[var(--color-primary)] mx-auto mb-4"></div>
+                    <p className="text-[var(--color-gray)] font-medium">Loading confirmation...</p>
+                </div>
+            </div>
+        }>
+            <ConfirmationContent />
+        </Suspense>
     );
 }
