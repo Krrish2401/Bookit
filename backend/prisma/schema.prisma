@@ -64,3 +64,17 @@ model PromoCode {
 
   @@map("promo_codes")
 }
+
+model BookingLock {
+  id            String    @id @default(cuid())
+  experienceId  String
+  bookingDate   String
+  bookingTime   String
+  lockedBy      String    // Session/Request ID
+  lockedAt      DateTime  @default(now())
+  expiresAt     DateTime  // Lock timeout
+  
+  @@unique([experienceId, bookingDate, bookingTime])
+  @@index([expiresAt])
+  @@map("booking_locks")
+}

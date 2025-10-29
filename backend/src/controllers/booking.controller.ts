@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { bookingMutex } from '../utils/bookingMutex';
 
 const prisma = new PrismaClient();
 
@@ -51,66 +52,98 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // Check availability for this date and time
-        const existingBookings = await prisma.booking.findMany({
-            where: {
+        // Use mutex to ensure only one booking can be processed at a time for this slot
+        try {
+            const booking = await bookingMutex.withLock(
                 experienceId,
-                bookingDate,
-                bookingTime
-            }
-        });
-
-        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-        const maxCapacity = 10; // Max capacity per slot
-        const availableSlots = maxCapacity - totalBooked;
-
-        if (availableSlots < quantity) {
-            res.status(400).json({
-                success: false,
-                message: `Not enough slots available. Only ${availableSlots} slot(s) remaining for this time.`
-            });
-            return;
-        }
-
-        // Generate unique reference ID
-        let referenceId = generateReferenceId();
-        let existingBooking = await prisma.booking.findUnique({
-            where: { referenceId }
-        });
-
-        // Ensure uniqueness
-        while (existingBooking) {
-            referenceId = generateReferenceId();
-            existingBooking = await prisma.booking.findUnique({
-                where: { referenceId }
-            });
-        }
-
-        // Create booking
-        const booking = await prisma.booking.create({
-            data: {
-                referenceId,
-                experienceId,
-                fullName,
-                email,
                 bookingDate,
                 bookingTime,
-                quantity,
-                subtotal,
-                taxes,
-                total,
-                discount: discount || 0,
-                promoCode
-            },
-            include: {
-                experience: true
-            }
-        });
+                async () => {
+                    // Check availability within the lock to prevent race conditions
+                    const existingBookings = await prisma.booking.findMany({
+                        where: {
+                            experienceId,
+                            bookingDate,
+                            bookingTime
+                        }
+                    });
 
-        res.status(201).json({
-            success: true,
-            data: booking
-        });
+                    const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+                    const maxCapacity = 10; // Max capacity per slot
+                    const availableSlots = maxCapacity - totalBooked;
+
+                    if (availableSlots < quantity) {
+                        throw new Error(`NOT_ENOUGH_SLOTS:${availableSlots}`);
+                    }
+
+                    // Generate unique reference ID
+                    let referenceId = generateReferenceId();
+                    let existingBooking = await prisma.booking.findUnique({
+                        where: { referenceId }
+                    });
+
+                    // Ensure uniqueness
+                    while (existingBooking) {
+                        referenceId = generateReferenceId();
+                        existingBooking = await prisma.booking.findUnique({
+                            where: { referenceId }
+                        });
+                    }
+
+                    // Create booking using transaction to ensure atomicity
+                    const newBooking = await prisma.$transaction(async (tx) => {
+                        return tx.booking.create({
+                            data: {
+                                referenceId,
+                                experienceId,
+                                fullName,
+                                email,
+                                bookingDate,
+                                bookingTime,
+                                quantity,
+                                subtotal,
+                                taxes,
+                                total,
+                                discount: discount || 0,
+                                promoCode
+                            },
+                            include: {
+                                experience: true
+                            }
+                        });
+                    });
+
+                    return newBooking;
+                },
+                5, // Max 5 retries
+                500 // 500ms retry delay
+            );
+
+            res.status(201).json({
+                success: true,
+                data: booking
+            });
+        } catch (lockError: any) {
+            // Handle specific error cases
+            if (lockError.message?.startsWith('NOT_ENOUGH_SLOTS:')) {
+                const availableSlots = lockError.message.split(':')[1];
+                res.status(400).json({
+                    success: false,
+                    message: `Not enough slots available. Only ${availableSlots} slot(s) remaining for this time.`
+                });
+                return;
+            }
+
+            if (lockError.message === 'Unable to acquire booking lock. Please try again.') {
+                res.status(409).json({
+                    success: false,
+                    message: 'This slot is being booked by another user. Please try again in a moment.'
+                });
+                return;
+            }
+
+            throw lockError;
+        }
     } catch (error) {
         console.error('Error creating booking:', error);
         res.status(500).json({

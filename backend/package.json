@@ -10,7 +10,10 @@
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:studio": "prisma studio",
-        "seed": "ts-node prisma/seed.ts"
+        "seed": "ts-node prisma/seed.ts",
+        "cleanup:locks": "ts-node src/scripts/cleanupLocks.ts",
+        "cleanup:test-bookings": "ts-node src/scripts/cleanupTestBookings.ts",
+        "test:concurrency": "ts-node src/tests/concurrencyTest.ts"
     },
     "keywords": [],
     "author": "",
@@ -19,7 +22,8 @@
         "@prisma/client": "^5.22.0",
         "express": "^4.19.2",
         "cors": "^2.8.5",
-        "dotenv": "^16.4.5"
+        "dotenv": "^16.4.5",
+        "axios": "^1.6.0"
     },
     "devDependencies": {
         "@types/express": "^4.17.21",

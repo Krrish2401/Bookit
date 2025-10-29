@@ -32,6 +32,8 @@ A full-stack web application for booking adventure experiences built with Next.j
 - ✅ Toast notifications for user feedback
 - ✅ Fully responsive design (mobile & desktop)
 - ✅ Professional folder structure
+- ✅ **Concurrency control to prevent double-booking** 🆕
+- ✅ **Race condition protection with mutex locking** 🆕
 
 ## 🛠️ Setup Instructions
 
@@ -39,6 +41,14 @@ A full-stack web application for booking adventure experiences built with Next.j
 - Node.js 18+ installed
 - PostgreSQL database (NeonDB account)
 - Git
+
+### Quick Setup with Concurrency Control
+
+**📌 New Feature:** This project now includes race condition prevention!
+
+**Quick Start:** Follow [`QUICK_START.md`](./QUICK_START.md) for the fastest setup.
+
+**Detailed Setup:** See below or check [`SETUP_CONCURRENCY.md`](./SETUP_CONCURRENCY.md) for comprehensive instructions.
 
 ### Backend Setup
 
@@ -85,6 +95,8 @@ A full-stack web application for booking adventure experiences built with Next.j
    ```
    
    Backend should now be running on http://localhost:5000
+
+   **Note:** Migration includes the new `booking_locks` table for concurrency control.
 
 ### Frontend Setup
 
@@ -183,8 +195,40 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
 - `GET /api/experiences/:id` - Get experience by ID
 
 ### Bookings
-- `POST /api/bookings` - Create a new booking
+- `POST /api/bookings` - Create a new booking (with concurrency control)
 - `GET /api/bookings/:referenceId` - Get booking by reference ID
+- `GET /api/bookings/check-availability` - Check slot availability
+
+## 🔐 Concurrency Control
+
+This application implements mutex-style locking to prevent race conditions and double-booking.
+
+### How It Works:
+1. When a user attempts to book, the system acquires an exclusive lock for that slot
+2. Only one booking can be processed at a time per slot
+3. Other concurrent requests wait or retry automatically
+4. Locks expire after 30 seconds to prevent deadlocks
+
+### Documentation:
+- 📘 **Quick Start:** [`QUICK_START.md`](./QUICK_START.md) - Get up and running in 5 minutes
+- 📗 **Setup Guide:** [`SETUP_CONCURRENCY.md`](./SETUP_CONCURRENCY.md) - Detailed setup instructions
+- 📕 **Technical Docs:** [`CONCURRENCY_CONTROL.md`](./CONCURRENCY_CONTROL.md) - Deep dive into the implementation
+- 📙 **Summary:** [`IMPLEMENTATION_SUMMARY.md`](./IMPLEMENTATION_SUMMARY.md) - Complete overview
+- 📊 **Visual Guide:** [`VISUAL_GUIDE.md`](./VISUAL_GUIDE.md) - Diagrams and visual explanations
+
+### Testing Concurrency:
+```powershell
+# Run automated concurrency tests
+cd backend
+npm run test:concurrency
+
+# Or test manually:
+# 1. Open two browser tabs
+# 2. Navigate to the same experience details page
+# 3. Select the same date/time slot
+# 4. Click "Book now" simultaneously
+# 5. Only one should succeed ✓
+```
 
 ## 📱 Features Overview
 
@@ -228,11 +272,13 @@ The application follows the provided Figma design with:
 
 ### Backend
 ```powershell
-npm run dev          # Start development server
-npm run build        # Build for production
-npm start            # Start production server
-npm run seed         # Seed database with sample data
+npm run dev           # Start development server
+npm run build         # Build for production
+npm start             # Start production server
+npm run seed          # Seed database with sample data
 npm run prisma:studio # Open Prisma Studio
+npm run cleanup:locks # Manually cleanup expired locks
+npm run test:concurrency # Test race condition protection
 ```
 
 ### Frontend
@@ -250,6 +296,8 @@ npm run lint         # Run ESLint
 - Tax rate is set to 6% (configurable in `frontend/src/lib/utils.ts`)
 - Sample data includes 8 different experiences
 - All images are from Unsplash for demonstration
+- **Concurrency control prevents simultaneous bookings of the same slot**
+- **Database locks ensure booking integrity and prevent race conditions**
 
 ## 🐛 Troubleshooting
 
