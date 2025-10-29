@@ -12,7 +12,7 @@ node_modules/
 coverage/
 
 # Next.js (Frontend)
-./Frontend/.next
+.next/
 out/
 build/
 dist/
