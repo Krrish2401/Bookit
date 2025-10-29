@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Experience {
+  id          String    @id @default(cuid())
+  title       String
+  location    String
+  description String
+  price       Float
+  image       String
+  availableDates String[] // Array of available dates
+  availableTimes String[] // Array of available time slots
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+
+  @@map("experiences")
+}
+
+model Booking {
+  id            String      @id @default(cuid())
+  referenceId   String      @unique // Unique booking reference like "HUF568SO"
+  experienceId  String
+  experience    Experience  @relation(fields: [experienceId], references: [id])
+  
+  // User information
+  fullName      String
+  email         String
+  
+  // Booking details
+  bookingDate   String
+  bookingTime   String
+  quantity      Int
+  
+  // Pricing
+  subtotal      Float
+  taxes         Float
+  total         Float
+  discount      Float       @default(0)
+  
+  promoCode     String?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([experienceId, bookingDate, bookingTime])
+  @@map("bookings")
+}
+
+model PromoCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  discount    Float     // Discount percentage (e.g., 10 for 10%)
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("promo_codes")
+}
