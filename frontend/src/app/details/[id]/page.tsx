@@ -69,7 +69,6 @@ export default function DetailsPage() {
             );
             setAvailableSlots(availability.availableSlots);
             
-            // Reset quantity if it exceeds available slots
             if (quantity > availability.availableSlots) {
                 setQuantity(Math.max(1, availability.availableSlots));
             }
@@ -174,7 +173,6 @@ export default function DetailsPage() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg-light)] py-10">
-            {/* Back Button */}
             <div className="px-6 md:px-16">
                 <button
                     onClick={() => router.push('/')}
@@ -187,9 +185,7 @@ export default function DetailsPage() {
                 </button>
             </div>
 
-            {/* Main Content */}
             <div className="flex flex-col lg:flex-row justify-between gap-10 px-6 md:px-16">
-                {/* Left Side - Experience Info */}
                 <div className="flex-1">
                     <img
                         src={experience.image}
@@ -268,8 +264,6 @@ export default function DetailsPage() {
                         Scenic routes, trained guides, and safety briefing. Minimum age 10.
                     </p>
                 </div>
-
-                {/* Right Side - Booking Summary */}
                 <div className="w-full lg:w-1/3 bg-[var(--color-bg-card)] rounded-2xl p-6 h-fit">
                     <div className="flex justify-between text-[var(--color-gray)] mb-2">
                         <span>Starts at</span>

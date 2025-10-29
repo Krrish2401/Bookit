@@ -66,7 +66,6 @@ export const checkAvailability = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Get total bookings for this specific date and time
         const bookings = await prisma.booking.findMany({
             where: {
                 experienceId: id,
@@ -75,10 +74,8 @@ export const checkAvailability = async (req: Request, res: Response): Promise<vo
             }
         });
 
-        // Calculate total booked quantity
         const totalBooked = bookings.reduce((sum, booking) => sum + booking.quantity, 0);
 
-        // Assuming max capacity of 10 per slot (you can make this configurable per experience)
         const maxCapacity = 10;
         const availableSlots = Math.max(0, maxCapacity - totalBooked);
 

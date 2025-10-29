@@ -30,7 +30,6 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
             promoCode
         } = req.body;
 
-        // Validate required fields
         if (!experienceId || !fullName || !email || !bookingDate || !bookingTime || !quantity) {
             res.status(400).json({
                 success: false,
@@ -39,7 +38,6 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // Check if experience exists
         const experience = await prisma.experience.findUnique({
             where: { id: experienceId }
         });
@@ -52,14 +50,12 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // Use mutex to ensure only one booking can be processed at a time for this slot
         try {
             const booking = await bookingMutex.withLock(
                 experienceId,
                 bookingDate,
                 bookingTime,
                 async () => {
-                    // Check availability within the lock to prevent race conditions
                     const existingBookings = await prisma.booking.findMany({
                         where: {
                             experienceId,
@@ -69,20 +65,18 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
                     });
 
                     const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-                    const maxCapacity = 10; // Max capacity per slot
+                    const maxCapacity = 10;
                     const availableSlots = maxCapacity - totalBooked;
 
                     if (availableSlots < quantity) {
                         throw new Error(`NOT_ENOUGH_SLOTS:${availableSlots}`);
                     }
 
-                    // Generate unique reference ID
                     let referenceId = generateReferenceId();
                     let existingBooking = await prisma.booking.findUnique({
                         where: { referenceId }
                     });
 
-                    // Ensure uniqueness
                     while (existingBooking) {
                         referenceId = generateReferenceId();
                         existingBooking = await prisma.booking.findUnique({
@@ -90,7 +84,6 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
                         });
                     }
 
-                    // Create booking using transaction to ensure atomicity
                     const newBooking = await prisma.$transaction(async (tx) => {
                         return tx.booking.create({
                             data: {
@@ -115,8 +108,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
                     return newBooking;
                 },
-                5, // Max 5 retries
-                500 // 500ms retry delay
+                5,
+                500 
             );
 
             res.status(201).json({
@@ -124,7 +117,6 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
                 data: booking
             });
         } catch (lockError: any) {
-            // Handle specific error cases
             if (lockError.message?.startsWith('NOT_ENOUGH_SLOTS:')) {
                 const availableSlots = lockError.message.split(':')[1];
                 res.status(400).json({
@@ -197,7 +189,6 @@ export const checkAvailability = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Get existing bookings for this slot
         const existingBookings = await prisma.booking.findMany({
             where: {
                 experienceId: experienceId as string,
@@ -207,7 +198,7 @@ export const checkAvailability = async (req: Request, res: Response): Promise<vo
         });
 
         const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-        const maxCapacity = 10; // Max capacity per slot
+        const maxCapacity = 10;
         const availableSlots = maxCapacity - totalBooked;
 
         res.status(200).json({

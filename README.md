@@ -1,54 +1,55 @@
 # BookIt - Experience Booking Platform
 
-A full-stack web application for booking adventure experiences built with Next.js, Express, PostgreSQL, and Prisma.
+A full-stack web application for booking adventure experiences and activities across India. Built with modern technologies for a seamless booking experience with robust concurrency control.
 
-## 🚀 Tech Stack
+##  Tech Stack
 
 ### Frontend
-- **Framework:** Next.js 16 with TypeScript
-- **Styling:** Tailwind CSS 4
-- **UI Components:** Lucide React (icons)
+- **Framework:** Next.js 15 with TypeScript and App Router
+- **Styling:** Tailwind CSS with custom design system
+- **UI Components:** Custom components with Lucide React icons
 - **Notifications:** React Hot Toast
-- **PDF Generation:** jsPDF
+- **PDF Generation:** jsPDF for booking receipts
 - **HTTP Client:** Axios
+- **State Management:** React Hooks
 
 ### Backend
-- **Runtime:** Node.js
-- **Framework:** Express with TypeScript
+- **Runtime:** Node.js with TypeScript
+- **Framework:** Express.js
 - **Database:** PostgreSQL (NeonDB)
-- **ORM:** Prisma
-- **CORS:** Enabled for frontend communication
+- **ORM:** Prisma ORM
+- **Concurrency Control:** Mutex-based locking system
+- **CORS:** Configured for cross-origin requests
 
-## 📋 Features
+##  Features
 
-- ✅ Browse and search experiences by title/location
-- ✅ Filter experiences by categories
-- ✅ View detailed experience information
-- ✅ Select date, time, and quantity for bookings
-- ✅ Real-time price calculation with taxes
-- ✅ User-friendly checkout process
-- ✅ Booking confirmation with unique reference ID
-- ✅ Download booking receipt as PDF
-- ✅ Toast notifications for user feedback
-- ✅ Fully responsive design (mobile & desktop)
-- ✅ Professional folder structure
-- ✅ **Concurrency control to prevent double-booking** 🆕
-- ✅ **Race condition protection with mutex locking** 🆕
+### Advanced Features
+-  **Concurrency Control** - Prevents double-booking with mutex locking
+-  **Race Condition Protection** - Database-level booking locks
+-  **Real-time Availability** - Live slot capacity checking
+-  **Lock Metrics** - Performance monitoring and analytics
+-  **Automatic Cleanup** - Expired lock removal
+-  **Promo Code System** - Discount validation and application
+-  **Fully Responsive** - Optimized for mobile, tablet, and desktop
+-  **Modern UI/UX** - Smooth animations and transitions
+-  **Smart Notifications** - Toast messages for user feedback
 
-## 🛠️ Setup Instructions
+### User Experience
+- Animated page transitions and loading states
+- Hover effects and interactive elements
+- Sticky header with search functionality
+- Professional card-based layout
+- Gradient overlays and visual effects
+- Form validation and error handling
+- Success/error feedback system
+
+## Setup Instructions
 
 ### Prerequisites
-- Node.js 18+ installed
-- PostgreSQL database (NeonDB account)
-- Git
-
-### Quick Setup with Concurrency Control
-
-**📌 New Feature:** This project now includes race condition prevention!
-
-**Quick Start:** Follow [`QUICK_START.md`](./QUICK_START.md) for the fastest setup.
-
-**Detailed Setup:** See below or check [`SETUP_CONCURRENCY.md`](./SETUP_CONCURRENCY.md) for comprehensive instructions.
+- **Node.js** 18+ installed
+- **PostgreSQL** database 
+- **npm** or **yarn** package manager
+- **Git** for version control
 
 ### Backend Setup
 
@@ -62,16 +63,17 @@ A full-stack web application for booking adventure experiences built with Next.j
    npm install
    ```
 
-3. **Create `.env` file:**
-   Create a `.env` file in the `backend` directory with the following content:
+3. **Configure environment variables:**
+   
+   Create a `.env` file in the `backend` directory:
    ```env
-   DATABASE_URL="your-neondb-connection-string-here"
+   DATABASE_URL="postgresql://username:password@host/database?sslmode=require"
    PORT=5000
    NODE_ENV=development
    FRONTEND_URL=http://localhost:3000
    ```
    
-   **Replace `your-neondb-connection-string-here` with your actual NeonDB connection string.**
+   **Note:** Replace the `DATABASE_URL` with your actual NeonDB connection string.
 
 4. **Generate Prisma Client:**
    ```powershell
@@ -80,27 +82,34 @@ A full-stack web application for booking adventure experiences built with Next.j
 
 5. **Run database migrations:**
    ```powershell
-   npm run prisma:migrate
+   npx prisma migrate dev --name init
    ```
-   When prompted, name your migration (e.g., "init")
+   
+   This creates:
+   - `experiences` table
+   - `bookings` table
+   - `promo_codes` table
+   - `booking_locks` table (for concurrency control)
 
-6. **Seed the database:**
+6. **Seed the database with sample data:**
    ```powershell
    npm run seed
    ```
+   
+   This populates:
+   - 8 diverse adventure experiences (Kayaking, Scuba Diving, Paragliding, etc.)
+   - 3 promo codes (SAVE10, WELCOME20, SUMMER15)
 
-7. **Start the backend server:**
+7. **Start the development server:**
    ```powershell
    npm run dev
    ```
    
-   Backend should now be running on http://localhost:5000
-
-   **Note:** Migration includes the new `booking_locks` table for concurrency control.
+   ✅ Backend running at: **http://localhost:5000**
 
 ### Frontend Setup
 
-1. **Open a new terminal and navigate to frontend directory:**
+1. **Open a new terminal and navigate to frontend:**
    ```powershell
    cd frontend
    ```
@@ -110,228 +119,185 @@ A full-stack web application for booking adventure experiences built with Next.j
    npm install
    ```
 
-3. **Create `.env.local` file:**
-   Create a `.env.local` file in the `frontend` directory with:
+3. **Configure environment variables:**
+   
+   Create a `.env.local` file in the `frontend` directory:
    ```env
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   NEXT_PUBLIC_API_URL=http://localhost:5000
    ```
 
 4. **Start the development server:**
    ```powershell
    npm run dev
    ```
-   
-   Frontend should now be running on http://localhost:3000
+   Frontend running at: **http://localhost:3000**
 
-## 📁 Project Structure
+### Verify Installation
 
-```
-Bookit/
-├── backend/
-│   ├── src/
-│   │   ├── controllers/
-│   │   │   ├── booking.controller.ts
-│   │   │   └── experience.controller.ts
-│   │   ├── routes/
-│   │   │   ├── booking.routes.ts
-│   │   │   └── experience.routes.ts
-│   │   └── server.ts
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── seed.ts
-│   ├── .env (create this)
-│   ├── package.json
-│   └── tsconfig.json
-│
-└── frontend/
-    ├── src/
-    │   ├── app/
-    │   │   ├── checkout/
-    │   │   │   └── page.tsx
-    │   │   ├── confirmation/
-    │   │   │   └── page.tsx
-    │   │   ├── details/
-    │   │   │   └── [id]/
-    │   │   │       └── page.tsx
-    │   │   ├── layout.tsx
-    │   │   ├── page.tsx
-    │   │   └── globals.css
-    │   ├── components/
-    │   │   ├── ExperienceCard.tsx
-    │   │   ├── FilterBar.tsx
-    │   │   ├── Header.tsx
-    │   │   ├── SearchBar.tsx
-    │   │   └── ToastProvider.tsx
-    │   ├── lib/
-    │   │   ├── api.ts
-    │   │   ├── services.ts
-    │   │   └── utils.ts
-    │   └── types/
-    │       └── index.ts
-    ├── .env.local (create this)
-    ├── package.json
-    └── tsconfig.json
-```
+1. Open **http://localhost:3000** in your browser
+2. You should see 8 experience cards
+3. Try searching for "Kayaking" or "Bangalore"
+4. Click on any experience to view details
+5. Test the booking flow end-to-end
 
-## 🔑 Environment Variables
-
-### Backend (.env)
-```env
-DATABASE_URL="your-neondb-connection-string"
-PORT=5000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
-```
-
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-## 🎯 API Endpoints
+## API Endpoints
 
 ### Experiences
-- `GET /api/experiences` - Get all experiences
-- `GET /api/experiences/:id` - Get experience by ID
+- `GET /experiences` - Retrieve all experiences
+- `GET /experiences/:id` - Get specific experience by ID
+- `GET /experiences/:id/availability` - Check availability for date/time
 
 ### Bookings
-- `POST /api/bookings` - Create a new booking (with concurrency control)
-- `GET /api/bookings/:referenceId` - Get booking by reference ID
-- `GET /api/bookings/check-availability` - Check slot availability
+- `POST /bookings` - Create new booking (with concurrency protection)
+- `GET /bookings/:referenceId` - Retrieve booking by reference
+- `GET /bookings/check-availability` - Check slot availability
+  - Query params: `experienceId`, `bookingDate`, `bookingTime`
 
-## 🔐 Concurrency Control
+### Promo Codes
+- `GET /promo-codes/validate/:code` - Validate promo code
 
-This application implements mutex-style locking to prevent race conditions and double-booking.
+### Health Check
+- `GET /health` - API health status
 
-### How It Works:
-1. When a user attempts to book, the system acquires an exclusive lock for that slot
-2. Only one booking can be processed at a time per slot
-3. Other concurrent requests wait or retry automatically
-4. Locks expire after 30 seconds to prevent deadlocks
+##  Concurrency Control System
 
-### Documentation:
-- 📘 **Quick Start:** [`QUICK_START.md`](./QUICK_START.md) - Get up and running in 5 minutes
-- 📗 **Setup Guide:** [`SETUP_CONCURRENCY.md`](./SETUP_CONCURRENCY.md) - Detailed setup instructions
-- 📕 **Technical Docs:** [`CONCURRENCY_CONTROL.md`](./CONCURRENCY_CONTROL.md) - Deep dive into the implementation
-- 📙 **Summary:** [`IMPLEMENTATION_SUMMARY.md`](./IMPLEMENTATION_SUMMARY.md) - Complete overview
-- 📊 **Visual Guide:** [`VISUAL_GUIDE.md`](./VISUAL_GUIDE.md) - Diagrams and visual explanations
+### Overview
+Implements database-level mutex locking to prevent race conditions and double-booking scenarios.
 
-### Testing Concurrency:
+### How It Works
+1. **Lock Acquisition** - Before booking, system acquires exclusive lock
+2. **Atomic Operations** - Only one request processes per slot at a time
+3. **Automatic Retry** - Concurrent requests wait and retry intelligently
+4. **Lock Expiration** - Locks auto-expire after 30 seconds
+5. **Cleanup Process** - Background job removes stale locks
+
+### Performance Metrics
+- Lock acquisition time
+- Lock wait time
+- Retry attempts
+- Success/failure rates
+- Available via lock metrics utility
+
+## Development Commands
+
+### Backend
 ```powershell
-# Run automated concurrency tests
+npm run dev              # Start dev server with hot reload
+npm run build            # Compile TypeScript to JavaScript
+npm start                # Run production build
+npm run seed             # Seed database with sample data
+npm run prisma:studio    # Open Prisma Studio GUI
+npm run prisma:generate  # Generate Prisma Client
+npm run prisma:migrate   # Run database migrations
+```
+
+### Frontend
+```powershell
+npm run dev              # Start Next.js dev server
+npm run build            # Build for production
+npm start                # Run production build
+npm run lint             # Run ESLint checks
+```
+
+## 🏗️ Building for Production
+
+### Backend Build
+```powershell
 cd backend
-npm run test:concurrency
-
-# Or test manually:
-# 1. Open two browser tabs
-# 2. Navigate to the same experience details page
-# 3. Select the same date/time slot
-# 4. Click "Book now" simultaneously
-# 5. Only one should succeed ✓
+npm run build
+npm start
 ```
 
-## 📱 Features Overview
-
-### Home Page
-- Grid display of all experiences
-- Search bar for filtering by title/location
-- Category filter buttons
-- Responsive card layout
-
-### Details Page
-- Experience image and description
-- Date and time slot selection
-- Quantity selector
-- Real-time price calculation
-- Booking summary sidebar
-
-### Checkout Page
-- User information form (name, email)
-- Promo code input (UI only)
-- Terms and conditions checkbox
-- Booking summary
-- Payment confirmation
-
-### Confirmation Page
-- Booking success message
-- Unique reference ID
-- Complete booking summary
-- Download receipt button (PDF)
-- Back to home button
-
-## 🎨 Design
-
-The application follows the provided Figma design with:
-- Highway Delite branding
-- Green (#4CAF50) and Yellow (#FFC107) color scheme
-- Clean, modern UI
-- Mobile-responsive layouts
-- Professional typography
-
-## 🔧 Development Commands
-
-### Backend
+### Frontend Build
 ```powershell
-npm run dev           # Start development server
-npm run build         # Build for production
-npm start             # Start production server
-npm run seed          # Seed database with sample data
-npm run prisma:studio # Open Prisma Studio
-npm run cleanup:locks # Manually cleanup expired locks
-npm run test:concurrency # Test race condition protection
+cd frontend
+npm run build
+npm start
 ```
 
-### Frontend
+##  Deployment
+
+### Environment Variables for Production
+
+**Backend:**
+```env
+DATABASE_URL=your-production-database-url
+PORT=5000
+NODE_ENV=production
+FRONTEND_URL=https://your-frontend-domain.com
+```
+
+**Frontend:**
+```env
+NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+```
+
+##  Sample Data
+
+### Experiences (8 Total)
+1. **Kayaking Adventure** - Udupi, Karnataka (₹999)
+2. **Nandi Hills Sunrise Trek** - Bangalore (₹899)
+3. **Coffee Plantation Tour** - Coorg (₹1,299)
+4. **Sunderbans Mangrove Safari** - West Bengal (₹999)
+5. **Bungee Jumping** - Rishikesh (₹999)
+6. **Scuba Diving Experience** - Andaman Islands (₹1,299)
+7. **Paragliding Adventure** - Bir Billing (₹999)
+8. **Desert Safari & Camping** - Jaisalmer (₹1,299)
+
+### Promo Codes
+- **SAVE10** - 10% discount
+- **WELCOME20** - 20% discount
+- **SUMMER15** - 15% discount
+
+##  Troubleshooting
+
+### Common Issues
+
+**Database Connection Error:**
 ```powershell
-npm run dev          # Start development server
-npm run build        # Build for production
-npm start            # Start production server
-npm run lint         # Run ESLint
+# Verify connection string in .env
+# Check if database is accessible
+# Run: npx prisma db push
 ```
 
-## 📝 Notes
+**Port Already in Use:**
+```powershell
+# Kill process using port 5000 or 3000
+# Windows: netstat -ano | findstr :5000
+# Then: taskkill /PID <PID> /F
+```
 
-- No authentication is implemented (as per requirements)
-- User information is stored with each booking
-- Tax rate is set to 6% (configurable in `frontend/src/lib/utils.ts`)
-- Sample data includes 8 different experiences
-- All images are from Unsplash for demonstration
-- **Concurrency control prevents simultaneous bookings of the same slot**
-- **Database locks ensure booking integrity and prevent race conditions**
+**Prisma Client Error:**
+```powershell
+# Regenerate Prisma Client
+npx prisma generate
+```
 
-## 🐛 Troubleshooting
+**Module Not Found:**
+```powershell
+# Delete node_modules and reinstall
+rm -rf node_modules
+npm install
+```
 
-If you encounter any issues:
+**Build Errors:**
+```powershell
+# Clear cache and rebuild
+npm run clean  # If script exists
+npm run build
+```
 
-1. **Database connection error:**
-   - Verify your NeonDB connection string in `.env`
-   - Check if the database is accessible
+##  Notes
 
-2. **Port already in use:**
-   - Change PORT in backend `.env` file
-   - Update NEXT_PUBLIC_API_URL in frontend `.env.local`
+- No authentication implemented (per requirements)
+- User info stored with each booking
+- Tax rate: 6% (configurable in utils)
+- Images from Pexels (free stock photos)
+- Promo codes have expiration dates
+- Booking slots have max capacity (default: 20)
+- Lock expiration: 30 seconds
+- Reference IDs are 8-character alphanumeric
 
-3. **Prisma errors:**
-   - Run `npm run prisma:generate` again
-   - Delete `node_modules` and reinstall
+##  Contributing
 
-## 🚀 Deployment
-
-### Backend
-Can be deployed to platforms like:
-- Railway
-- Render
-- Heroku
-- Vercel (serverless)
-
-### Frontend
-Best deployed on:
-- Vercel (recommended for Next.js)
-- Netlify
-- Railway
-
-Remember to set environment variables on your deployment platform!
-
-## 📄 License
-
-This project is for educational/demonstration purposes.
+This is an educational project. Feel free to fork and modify for learning purposes.

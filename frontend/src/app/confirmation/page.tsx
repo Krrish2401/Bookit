@@ -44,20 +44,17 @@ export default function ConfirmationPage() {
         if (!booking) return;
 
         try {
-            // Dynamic import to avoid SSR issues
             const { jsPDF } = await import("jspdf");
             const doc = new jsPDF();
 
-            // Header
             doc.setFontSize(20);
-            doc.setTextColor(250, 204, 21); // yellow-400
+            doc.setTextColor(250, 204, 21);
             doc.text("highway delite", 105, 20, { align: "center" });
 
             doc.setFontSize(16);
             doc.setTextColor(0, 0, 0);
             doc.text("Booking Receipt", 105, 35, { align: "center" });
 
-            // Add a line
             doc.setDrawColor(250, 204, 21);
             doc.setLineWidth(0.5);
             doc.line(20, 40, 190, 40);
@@ -104,7 +101,7 @@ export default function ConfirmationPage() {
             doc.text(formatCurrency(subtotal), 170, 174, { align: "right" });
             
             if (discount > 0) {
-                doc.setTextColor(34, 197, 94); // green-600
+                doc.setTextColor(34, 197, 94); 
                 doc.text(`Discount:`, 20, 181);
                 doc.text(`-${formatCurrency(discount)}`, 170, 181, { align: "right" });
                 doc.setTextColor(0, 0, 0);
@@ -341,8 +338,6 @@ export default function ConfirmationPage() {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Booking Date */}
                             <div className="text-center text-sm text-[var(--color-gray)] mb-6">
                                 <p>Booked on {new Date(booking.createdAt).toLocaleDateString('en-US', { 
                                     year: 'numeric', 

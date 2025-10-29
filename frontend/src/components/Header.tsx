@@ -10,7 +10,6 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Sync with URL on mount
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     if (urlSearch) {
@@ -18,7 +17,6 @@ export default function Header() {
     }
   }, [searchParams]);
 
-  // Add scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -27,7 +25,6 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Update URL as user types (real-time search)
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (value.trim()) {
@@ -39,7 +36,6 @@ export default function Header() {
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      // Already handled by onChange, but kept for consistency
       if (searchQuery.trim()) {
         router.push(`/?search=${encodeURIComponent(searchQuery)}`);
       } else {

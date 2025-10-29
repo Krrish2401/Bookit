@@ -36,7 +36,6 @@ export const generatePDF = (booking: any) => {
   import("jspdf").then(({ jsPDF }) => {
     const doc = new jsPDF();
 
-    // Header
     doc.setFontSize(20);
     doc.setTextColor(76, 175, 80);
     doc.text("Highway Delite", 105, 20, { align: "center" });
@@ -45,11 +44,9 @@ export const generatePDF = (booking: any) => {
     doc.setTextColor(0, 0, 0);
     doc.text("Booking Receipt", 105, 30, { align: "center" });
 
-    // Reference ID
     doc.setFontSize(12);
     doc.text(`Reference ID: ${booking.referenceId}`, 20, 50);
 
-    // Booking Details
     doc.setFontSize(10);
     doc.text("Booking Details:", 20, 65);
     doc.text(`Experience: ${booking.experience.title}`, 20, 75);
@@ -57,13 +54,11 @@ export const generatePDF = (booking: any) => {
     doc.text(`Time: ${booking.timeSlot}`, 20, 95);
     doc.text(`Quantity: ${booking.quantity}`, 20, 105);
 
-    // Customer Details
     doc.text("Customer Details:", 20, 120);
     doc.text(`Name: ${booking.name}`, 20, 130);
     doc.text(`Email: ${booking.email}`, 20, 140);
     doc.text(`Phone: ${booking.phone}`, 20, 150);
 
-    // Price Details
     doc.text("Price Details:", 20, 165);
     const subtotal = booking.experience.price * booking.quantity;
     const tax = calculateTax(subtotal);
@@ -75,7 +70,6 @@ export const generatePDF = (booking: any) => {
       195
     );
 
-    // Footer
     doc.setFontSize(8);
     doc.text(
       "Thank you for choosing Highway Delite!",
@@ -84,7 +78,6 @@ export const generatePDF = (booking: any) => {
       { align: "center" }
     );
 
-    // Save
     doc.save(`booking-${booking.referenceId}.pdf`);
   });
 };

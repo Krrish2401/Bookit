@@ -137,7 +137,6 @@ export default function CheckoutPage() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg-light)] py-10">
-            {/* Back Button */}
             <div className="px-6 md:px-16">
                 <button
                     onClick={() => router.back()}
@@ -150,9 +149,7 @@ export default function CheckoutPage() {
                 </button>
             </div>
 
-            {/* Checkout Section */}
             <div className="flex flex-col lg:flex-row justify-between gap-10 px-6 md:px-16">
-                {/* Left: Form */}
                 <div className="flex-1 bg-[var(--color-bg-card)] rounded-2xl p-6 shadow-lg animate-slide-left">
                     <h2 className="text-2xl font-bold text-[var(--color-dark)] mb-6 flex items-center">
                         <svg className="w-6 h-6 mr-2 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

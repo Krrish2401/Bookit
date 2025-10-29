@@ -14,9 +14,6 @@ export interface LockMetrics {
     }>;
 }
 
-/**
- * Get current lock metrics for monitoring
- */
 export async function getLockMetrics(): Promise<LockMetrics> {
     const now = new Date();
     
@@ -53,22 +50,16 @@ export async function getLockMetrics(): Promise<LockMetrics> {
     };
 }
 
-/**
- * Check if system is experiencing high lock contention
- */
 export async function isHighContention(threshold: number = 5): Promise<boolean> {
     const metrics = await getLockMetrics();
     return metrics.totalActiveLocks >= threshold;
 }
 
-/**
- * Log lock metrics to console
- */
 export async function logLockMetrics(): Promise<void> {
     try {
         const metrics = await getLockMetrics();
         
-        console.log('\n📊 Lock Metrics Report');
+        console.log('\n Lock Metrics Report');
         console.log('═'.repeat(50));
         console.log(`Active Locks: ${metrics.totalActiveLocks}`);
         
@@ -93,9 +84,6 @@ export async function logLockMetrics(): Promise<void> {
     }
 }
 
-/**
- * Express middleware to log lock metrics periodically
- */
 export function createLockMonitoringMiddleware(intervalSeconds: number = 60) {
     let lastLog = Date.now();
     
