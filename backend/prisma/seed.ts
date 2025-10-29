@@ -3,14 +3,12 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding database...');
+    console.log('Seeding database...');
 
-    // Clear existing data
     await prisma.booking.deleteMany();
     await prisma.promoCode.deleteMany();
     await prisma.experience.deleteMany();
 
-    // Create experiences
     const experiences = await Promise.all([
         prisma.experience.create({
             data: {
@@ -73,7 +71,7 @@ async function main() {
                 location: 'Sunderbans',
                 description: 'Curated small-group experience. Certified guide. Safety first with gear included. Experience the mangrove forests and wildlife.',
                 price: 999,
-                image: 'https://images.unsplash.com/photo-1569243824812-e7154e8b0eec?w=800&q=80',
+                image: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=800&q=80',
                 availableDates: ['Oct 22', 'Oct 23', 'Oct 24', 'Oct 25', 'Oct 26'],
                 availableTimes: ['07:00 am', '9:00 am', '11:00 am'],
             },
@@ -102,9 +100,8 @@ async function main() {
         }),
     ]);
 
-    console.log(`✅ Created ${experiences.length} experiences`);
+    console.log(`Created ${experiences.length} experiences`);
 
-    // Create promo codes
     const promoCodes = await Promise.all([
         prisma.promoCode.create({
             data: {
@@ -138,7 +135,7 @@ async function main() {
 
 main()
     .catch((e) => {
-        console.error('❌ Error seeding database:', e);
+        console.error('Error seeding database:', e);
         process.exit(1);
     })
     .finally(async () => {

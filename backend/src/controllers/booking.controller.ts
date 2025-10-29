@@ -151,3 +151,45 @@ export const getBookingByReferenceId = async (req: Request, res: Response): Prom
         });
     }
 };
+
+export const checkAvailability = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { experienceId, bookingDate, bookingTime } = req.query;
+
+        if (!experienceId || !bookingDate || !bookingTime) {
+            res.status(400).json({
+                success: false,
+                message: 'Missing required parameters'
+            });
+            return;
+        }
+
+        // Get existing bookings for this slot
+        const existingBookings = await prisma.booking.findMany({
+            where: {
+                experienceId: experienceId as string,
+                bookingDate: bookingDate as string,
+                bookingTime: bookingTime as string
+            }
+        });
+
+        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        const maxCapacity = 10; // Max capacity per slot
+        const availableSlots = maxCapacity - totalBooked;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                availableSlots,
+                maxCapacity,
+                isAvailable: availableSlots > 0
+            }
+        });
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check availability'
+        });
+    }
+};

@@ -1,70 +1,65 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Experience } from '@/types';
-import { formatCurrency } from '@/lib/utils';
-import Link from 'next/link';
-import Image from 'next/image';
-import { MapPin } from 'lucide-react';
+import Image from "next/image";
+import Link from "next/link";
+import { MapPin, Clock, IndianRupee } from "lucide-react";
+import { Experience } from "@/types";
+import { formatCurrency } from "@/lib/utils";
 
 interface ExperienceCardProps {
-  experience: Experience;
+    experience: Experience;
 }
 
 export default function ExperienceCard({ experience }: ExperienceCardProps) {
-  return (
-    <Link href={`/details/${experience.id}`} className="block h-full">
-      <motion.div
-        whileHover={{ y: -4 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="card overflow-hidden flex flex-col transition-all duration-300 p-2"
-      >
-        {/* Image */}
-        <div className="relative h-56 w-full overflow-hidden bg-gray-100">
-          <Image
-            src={experience.image}
-            alt={experience.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-          
-          {/* Location badge */}
-          <div className="absolute top-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md" style={{ backgroundColor: 'var(--glass)' }}>
-            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} />
-              {experience.location}
-            </span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-5 flex flex-col flex-1">
-          <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
-            {experience.title}
-          </h3>
-
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed flex-1">
-            {experience.description}
-          </p>
-
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 font-medium">FROM</span>
-              <span className="text-xl font-bold" style={{ color: 'var(--text)' }}>
-                {formatCurrency(experience.price)}
-              </span>
+    return (
+        <Link
+            href={`/details/${experience.id}`}
+            className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+        >
+            <div className="relative h-48">
+                <Image
+                    src={experience.image}
+                    alt={experience.title}
+                    fill
+                    className="object-cover"
+                />
+                {experience.category && (
+                    <div className="absolute top-3 right-3 bg-secondary text-white px-3 py-1 rounded-full text-sm font-semibold">
+                        {experience.category}
+                    </div>
+                )}
             </div>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="primary-btn text-sm font-bold"
-            >
-              View Details
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
-    </Link>
-  );
+
+            <div className="p-4">
+                <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">
+                    {experience.title}
+                </h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                    {experience.description}
+                </p>
+
+                <div className="space-y-2">
+                    <div className="flex items-center text-gray-600 text-sm">
+                        <MapPin className="h-4 w-4 mr-2 text-primary" />
+                        <span>{experience.location}</span>
+                    </div>
+
+                    <div className="flex items-center text-gray-600 text-sm">
+                        <Clock className="h-4 w-4 mr-2 text-primary" />
+                        <span>{experience.duration || 3} hours</span>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center text-primary font-bold text-lg">
+                            <IndianRupee className="h-5 w-5" />
+                            <span>{formatCurrency(experience.price)}</span>
+                        </div>
+                        <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            Book Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Link>
+    );
 }

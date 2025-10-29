@@ -1,40 +1,40 @@
-import api from './api';
-import { Experience, Booking, BookingFormData, PromoCode, AvailabilityResponse } from '@/types';
+import { api } from "./api";
+import { Experience, Booking, BookingFormData, PromoCode } from "@/types";
 
 export const experienceService = {
   getAll: async (): Promise<Experience[]> => {
-    const response = await api.get('/experiences');
-    return response.data.data;
+    const response = await api.get("/experiences");
+    return response.data.data || response.data;
   },
 
   getById: async (id: string): Promise<Experience> => {
     const response = await api.get(`/experiences/${id}`);
-    return response.data.data;
-  },
-
-  checkAvailability: async (id: string, date: string, time: string): Promise<AvailabilityResponse> => {
-    const response = await api.get(`/experiences/${id}/availability`, {
-      params: { date, time }
-    });
-    return response.data.data;
+    return response.data.data || response.data;
   },
 };
 
 export const bookingService = {
-  create: async (bookingData: BookingFormData): Promise<Booking> => {
-    const response = await api.post('/bookings', bookingData);
-    return response.data.data;
+  create: async (data: BookingFormData): Promise<Booking> => {
+    const response = await api.post("/bookings", data);
+    return response.data.data || response.data;
   },
 
   getByReferenceId: async (referenceId: string): Promise<Booking> => {
     const response = await api.get(`/bookings/${referenceId}`);
-    return response.data.data;
+    return response.data.data || response.data;
+  },
+
+  checkAvailability: async (experienceId: string, bookingDate: string, bookingTime: string): Promise<{ availableSlots: number; maxCapacity: number; isAvailable: boolean }> => {
+    const response = await api.get(`/bookings/check-availability`, {
+      params: { experienceId, bookingDate, bookingTime }
+    });
+    return response.data.data || response.data;
   },
 };
 
 export const promoCodeService = {
   validate: async (code: string): Promise<PromoCode> => {
     const response = await api.get(`/promo-codes/validate/${code}`);
-    return response.data.data;
+    return response.data.data || response.data;
   },
 };

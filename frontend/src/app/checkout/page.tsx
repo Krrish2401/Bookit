@@ -1,355 +1,298 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { bookingService, promoCodeService } from '@/lib/services';
-import { formatCurrency, calculatePricing } from '@/lib/utils';
-import { ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
-
-interface BookingDetails {
-  experienceId: string;
-  experienceTitle: string;
-  experienceLocation: string;
-  experienceImage: string;
-  bookingDate: string;
-  bookingTime: string;
-  quantity: number;
-  price: number;
-  subtotal: number;
-  taxes: number;
-  total: number;
-}
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { experienceService, bookingService, promoCodeService } from "@/lib/services";
+import { Experience, BookingFormData } from "@/types";
+import { formatCurrency, calculateSubtotal, calculateTotal, TAX_RATE } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
-  const router = useRouter();
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [promoLoading, setPromoLoading] = useState(false);
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [experience, setExperience] = useState<Experience | null>(null);
+    const [bookingData, setBookingData] = useState<any>(null);
+    const [discount, setDiscount] = useState(0);
+    const [promoApplied, setPromoApplied] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        promoCode: "",
+        agreeToTerms: false,
+    });
 
-  useEffect(() => {
-    const storedDetails = sessionStorage.getItem('bookingDetails');
-    if (!storedDetails) {
-      toast.error('No booking details found');
-      router.push('/');
-      return;
-    }
-    setBookingDetails(JSON.parse(storedDetails));
-  }, [router]);
+    useEffect(() => {
+        // Get booking data from sessionStorage
+        const storedData = sessionStorage.getItem("bookingData");
+        if (!storedData) {
+            toast.error("No booking data found");
+            router.push("/");
+            return;
+        }
 
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) {
-      toast.error('Please enter a promo code');
-      return;
-    }
+        const data = JSON.parse(storedData);
+        setBookingData(data);
+        fetchExperience(data.experienceId);
+    }, []);
 
-    try {
-      setPromoLoading(true);
-      const result = await promoCodeService.validate(promoCode.trim());
-      setAppliedPromo(result);
-      toast.success(`Promo code applied! ${result.discount}% discount`);
-    } catch (error: unknown) {
-      console.error('Error validating promo:', error);
-      const message = error instanceof Error && 'response' in error && typeof error.response === 'object' && error.response !== null && 'data' in error.response && typeof error.response.data === 'object' && error.response.data !== null && 'message' in error.response.data ? String(error.response.data.message) : 'Invalid promo code';
-      toast.error(message);
-      setAppliedPromo(null);
-    } finally {
-      setPromoLoading(false);
-    }
-  };
+    const fetchExperience = async (id: string) => {
+        try {
+            const data = await experienceService.getById(id);
+            setExperience(data);
+        } catch (error) {
+            console.error("Error fetching experience:", error);
+            toast.error("Failed to load experience details");
+        }
+    };
 
-  const handleRemovePromo = () => {
-    setAppliedPromo(null);
-    setPromoCode('');
-    toast.success('Promo code removed');
-  };
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: type === "checkbox" ? checked : value,
+        }));
+    };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const handleApplyPromo = async () => {
+        if (!formData.promoCode.trim()) {
+            toast.error("Please enter a promo code");
+            return;
+        }
 
-    if (!fullName.trim() || !email.trim()) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+        try {
+            const promoData = await promoCodeService.validate(formData.promoCode);
+            if (promoData && promoData.discount) {
+                setDiscount(promoData.discount / 100);
+                setPromoApplied(true);
+                toast.success(`Promo applied: ${promoData.discount}% off`);
+            }
+        } catch (error: any) {
+            setDiscount(0);
+            setPromoApplied(false);
+            toast.error(error.response?.data?.message || "Invalid promo code");
+        }
+    };
 
-    if (!agreeTerms) {
-      toast.error('Please agree to the terms and safety policy');
-      return;
-    }
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-    if (!bookingDetails) {
-      toast.error('Booking details not found');
-      return;
-    }
+        if (!formData.agreeToTerms) {
+            toast.error("Please agree to the terms and safety policy");
+            return;
+        }
 
-    try {
-      setLoading(true);
-      
-      // Calculate final pricing with promo if applied
-      const pricing = calculatePricing(
-        bookingDetails.price,
-        bookingDetails.quantity,
-        appliedPromo?.discount || 0
-      );
+        try {
+            setLoading(true);
 
-      const booking = await bookingService.create({
-        experienceId: bookingDetails.experienceId,
-        fullName,
-        email,
-        bookingDate: bookingDetails.bookingDate,
-        bookingTime: bookingDetails.bookingTime,
-        quantity: bookingDetails.quantity,
-        subtotal: pricing.subtotal,
-        taxes: pricing.taxes,
-        total: pricing.total,
-        discount: pricing.discount,
-        promoCode: appliedPromo?.code || undefined,
-      });
+            const baseSubtotal = calculateSubtotal(experience!.price, bookingData.quantity);
+            const discountAmount = baseSubtotal * discount;
+            const subtotalAfterDiscount = baseSubtotal - discountAmount;
+            const taxesAmount = Math.round(subtotalAfterDiscount * TAX_RATE);
+            const totalAmount = subtotalAfterDiscount + taxesAmount;
 
-      // Store booking reference
-      sessionStorage.setItem('bookingReference', booking.referenceId);
-      sessionStorage.setItem('completedBooking', JSON.stringify(booking));
-      
-      toast.success('Booking confirmed!');
-      router.push('/confirmation');
-    } catch (error: unknown) {
-      console.error('Error creating booking:', error);
-      const message = error instanceof Error && 'response' in error && typeof error.response === 'object' && error.response !== null && 'data' in error.response && typeof error.response.data === 'object' && error.response.data !== null && 'message' in error.response.data ? String(error.response.data.message) : 'Failed to create booking. Please try again.';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+            const bookingPayload: BookingFormData = {
+                experienceId: bookingData.experienceId,
+                fullName: formData.name,
+                email: formData.email,
+                bookingDate: bookingData.date,
+                bookingTime: bookingData.timeSlot,
+                quantity: bookingData.quantity,
+                subtotal: baseSubtotal,
+                taxes: taxesAmount,
+                total: totalAmount,
+                discount: discountAmount,
+                promoCode: promoApplied ? formData.promoCode : undefined,
+            };
 
-  if (!bookingDetails) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
-      </div>
-    );
-  }
+            const result = await bookingService.create(bookingPayload);
 
-  return (
-    <main className="min-h-screen bg-linear-to-b from-gray-50 to-white py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-[#4CAF50] mb-8 group transition-colors duration-300"
-        >
-          <ArrowLeft size={22} className="mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
-          <span className="font-semibold text-lg">Checkout</span>
-        </button>
+            // Clear sessionStorage
+            sessionStorage.removeItem("bookingData");
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* Left Column - Form */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 animate-fade-in">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-              <span className="w-2 h-10 bg-[#4CAF50] rounded-full"></span>
-              Your Details
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Personal Information */}
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-bold text-gray-800 mb-3">
-                  Full name
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all duration-300 text-gray-900 placeholder:text-gray-400"
-                  required
-                />
-              </div>
+            toast.success("Booking confirmed!");
+            router.push(`/confirmation?ref=${result.referenceId}`);
+        } catch (error: any) {
+            console.error("Error creating booking:", error);
+            toast.error(error.response?.data?.message || "Failed to create booking");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-bold text-gray-800 mb-3">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Your email"
-                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all duration-300 text-gray-900 placeholder:text-gray-400"
-                  required
-                />
-              </div>
-
-              {/* Promo Code */}
-              <div>
-                <label htmlFor="promoCode" className="block text-sm font-bold text-gray-800 mb-3">
-                  Promo code
-                </label>
-                {appliedPromo ? (
-                  <div className="flex items-center gap-3 p-4 bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-sm animate-scale-in">
-                    <div className="flex-1 flex items-center gap-3">
-                      <div className="bg-green-500 text-white p-2 rounded-lg">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <span className="text-green-800 font-bold block">{appliedPromo.code}</span>
-                        <span className="text-green-600 text-sm">{appliedPromo.discount}% discount applied</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemovePromo}
-                      className="text-red-600 hover:text-red-700 text-sm font-bold px-4 py-2 hover:bg-red-50 rounded-lg transition-colors duration-300"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      id="promoCode"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      placeholder="ENTER CODE"
-                      className="flex-1 px-5 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent uppercase font-semibold text-gray-900 placeholder:text-gray-400 transition-all duration-300"
-                      disabled={promoLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyPromo}
-                      disabled={promoLoading}
-                      className="px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed btn-hover-scale shadow-md"
-                    >
-                      {promoLoading ? 'Checking...' : 'Apply'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Terms Checkbox */}
-              <div className="flex items-start bg-gray-50 p-4 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="agreeTerms"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-1 h-5 w-5 text-[#4CAF50] border-gray-300 rounded focus:ring-[#4CAF50] cursor-pointer"
-                />
-                <label htmlFor="agreeTerms" className="ml-3 text-sm text-gray-700 cursor-pointer select-none">
-                  I agree to the terms and safety policy
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-linear-to-r from-[#FFC107] to-[#FFB300] hover:from-[#FFB300] hover:to-[#FFA000] text-gray-900 py-5 rounded-2xl font-bold text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed btn-hover-scale shadow-lg hover:shadow-2xl mt-8"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  'Pay and Confirm'
-                )}
-              </button>
-            </form>
-          </div>
-
-          {/* Right Column - Booking Summary */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-[#4CAF50] h-fit sticky top-24 animate-slide-in-right">
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-8 flex items-center gap-3">
-              <span className="w-2 h-10 bg-[#4CAF50] rounded-full"></span>
-              Booking Summary
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="bg-linear-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600">Experience</span>
-                  <span className="font-bold text-gray-900 text-right max-w-[60%]">{bookingDetails.experienceTitle}</span>
+    if (!experience || !bookingData) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg-light)]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-[var(--color-bg-card)] border-t-[var(--color-primary)] mx-auto mb-4"></div>
+                    <p className="text-[var(--color-gray)] font-medium">Loading checkout...</p>
                 </div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#4CAF50]" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
-                    </svg>
-                    Location
-                  </span>
-                  <span className="font-bold text-gray-900">{bookingDetails.experienceLocation}</span>
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#4CAF50]" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
-                    </svg>
-                    Date
-                  </span>
-                  <span className="font-bold text-gray-900">{bookingDetails.bookingDate}</span>
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#4CAF50]" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
-                    </svg>
-                    Time
-                  </span>
-                  <span className="font-bold text-gray-900">{bookingDetails.bookingTime}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-600">Quantity</span>
-                  <span className="font-bold text-gray-900 text-xl">{bookingDetails.quantity}</span>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-gray-700 font-semibold">Subtotal</span>
-                  <span className="font-bold text-gray-900 text-lg">
-                    {formatCurrency(bookingDetails.subtotal)}
-                  </span>
-                </div>
-                {appliedPromo && (
-                  <div className="flex items-center justify-between bg-green-50 -mx-8 px-8 py-3 border-l-4 border-green-500 animate-scale-in">
-                    <span className="text-green-700 font-bold flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/>
-                      </svg>
-                      Discount ({appliedPromo.discount}%)
-                    </span>
-                    <span className="font-bold text-green-700 text-lg">
-                      -{formatCurrency(bookingDetails.subtotal * (appliedPromo.discount / 100))}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-gray-700 font-semibold">Taxes</span>
-                  <span className="font-bold text-gray-900 text-lg">
-                    {formatCurrency(bookingDetails.taxes)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-2xl font-extrabold pt-4 border-t-2 border-gray-300 bg-linear-to-r from-[#4CAF50]/10 to-[#FFC107]/10 -mx-8 px-8 py-4 mt-4">
-                  <span className="text-gray-900">Total</span>
-                  <span className="text-[#4CAF50]">{formatCurrency(bookingDetails.total)}</span>
-                </div>
-              </div>
             </div>
-          </div>
+        );
+    }
+
+    const baseSubtotal = calculateSubtotal(experience.price, bookingData.quantity);
+    const subtotalAfterDiscount = baseSubtotal - baseSubtotal * discount;
+    const taxes = Math.round(subtotalAfterDiscount * TAX_RATE);
+    const total = subtotalAfterDiscount + taxes;
+
+    return (
+        <div className="min-h-screen bg-[var(--color-bg-light)] py-10">
+            {/* Back Button */}
+            <div className="px-6 md:px-16">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-2 text-[var(--color-dark)] hover:text-[var(--color-gray)] transition-colors mb-6"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span className="font-medium">Details</span>
+                </button>
+            </div>
+
+            {/* Checkout Section */}
+            <div className="flex flex-col lg:flex-row justify-between gap-10 px-6 md:px-16">
+                {/* Left: Form */}
+                <div className="flex-1 bg-[var(--color-bg-card)] rounded-2xl p-6 shadow-lg animate-slide-left">
+                    <h2 className="text-2xl font-bold text-[var(--color-dark)] mb-6 flex items-center">
+                        <svg className="w-6 h-6 mr-2 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Checkout
+                    </h2>
+
+                    <form onSubmit={handleSubmit}>
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                            <input
+                                type="text"
+                                name="name"
+                                placeholder="Full name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                required
+                                className="px-4 py-3 rounded-lg bg-[#dddddd] border border-[var(--color-border)] text-[var(--color-dark)] placeholder:text-[var(--color-gray)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-all"
+                            />
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                required
+                                className="px-4 py-3 rounded-lg bg-[#dddddd] border border-[var(--color-border)] text-[var(--color-dark)] placeholder:text-[var(--color-gray)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="flex gap-2 mb-4">
+                            <input
+                                type="text"
+                                name="promoCode"
+                                placeholder="Promo code"
+                                value={formData.promoCode}
+                                onChange={handleInputChange}
+                                className="flex-1 px-4 py-3 rounded-lg bg-[#dddddd] border border-[var(--color-border)] text-[var(--color-dark)] placeholder:text-[var(--color-gray)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-all"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleApplyPromo}
+                                className="bg-[var(--color-dark)] text-white px-6 py-3 rounded-lg font-medium hover:bg-[var(--color-dark-hover)] transform hover:scale-105 transition-all"
+                            >
+                                Apply
+                            </button>
+                        </div>
+
+                        {promoApplied && discount > 0 && (
+                            <div className="text-green-600 text-sm mb-4 bg-green-50 p-3 rounded-lg flex items-center animate-scale-in">
+                                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Promo applied: {(discount * 100).toFixed(0)}% off
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mb-4">
+                            <input
+                                type="checkbox"
+                                name="agreeToTerms"
+                                checked={formData.agreeToTerms}
+                                onChange={handleInputChange}
+                                className="w-4 h-4 accent-[var(--color-primary)]"
+                            />
+                            <label className="text-sm text-[var(--color-gray)]">
+                                I agree to the terms and safety policy
+                            </label>
+                        </div>
+                    </form>
+                </div>
+
+                <div className="w-full lg:w-1/3 bg-[var(--color-bg-card)] rounded-2xl p-6 h-fit shadow-xl border border-[var(--color-bg-card)] animate-slide-right">
+                    <h3 className="text-xl font-bold text-[var(--color-dark)] mb-4">Booking Summary</h3>
+                    <div className="space-y-3 pb-4 border-b border-[var(--color-border)]">
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span className="font-medium">Experience</span>
+                            <span className="font-semibold text-[var(--color-dark)]">{experience.title}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span>Date</span>
+                            <span className="font-medium">{bookingData.date}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span>Time</span>
+                            <span className="font-medium">{bookingData.timeSlot}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span>Quantity</span>
+                            <span className="font-medium">{bookingData.quantity} {bookingData.quantity > 1 ? 'people' : 'person'}</span>
+                        </div>
+                    </div>
+
+                    <div className="py-4 space-y-2">
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span>Subtotal</span>
+                            <span className="font-medium">{formatCurrency(subtotalAfterDiscount)}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--color-gray)]">
+                            <span>Taxes (6%)</span>
+                            <span className="font-medium">{formatCurrency(taxes)}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-opacity-10 -mx-6 px-6 py-4 mb-6">
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold text-[var(--color-dark)]">Total</span>
+                            <span className="text-2xl font-bold text-[var(--color-dark)]">{formatCurrency(total)}</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!formData.agreeToTerms || loading}
+                        className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 transform ${
+                            formData.agreeToTerms && !loading
+                                ? 'bg-[var(--color-primary)] text-[var(--color-dark)] hover:bg-[var(--color-primary-hover)] hover:scale-105 shadow-lg hover:shadow-xl'
+                                : 'bg-[var(--color-disabled)] text-[var(--color-gray)] cursor-not-allowed'
+                        }`}
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-[var(--color-gray)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
+                        ) : "Pay and Confirm"}
+                    </button>
+
+                    <div className="mt-4 flex items-center justify-center text-sm text-[var(--color-gray)]">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Secure payment processing
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </main>
-  );
+    );
 }

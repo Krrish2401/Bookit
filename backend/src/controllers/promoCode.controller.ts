@@ -49,7 +49,8 @@ export const validatePromoCode = async (req: Request, res: Response): Promise<vo
       success: true,
       data: {
         code: promoCode.code,
-        discount: promoCode.discount
+        discount: promoCode.discount,
+        isActive: promoCode.isActive
       }
     });
   } catch (error) {
